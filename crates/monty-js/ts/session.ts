@@ -921,6 +921,7 @@ class TurnAnswerer {
 class PrintTarget {
   private readonly callback: PrintCallback | undefined
   private failure: unknown = null
+  private failed = false
 
   constructor(input: PrintTargetInput | undefined) {
     // Collectors adapt once to a function so the drive loop / native path stay typed as PrintCallback.
@@ -932,7 +933,7 @@ class PrintTarget {
   }
 
   write(stream: 'stdout' | 'stderr', text: string): void {
-    if (this.failure !== null) {
+    if (this.failed) {
       return
     }
     if (this.callback === undefined) {
@@ -949,13 +950,14 @@ class PrintTarget {
       // Captured and re-thrown at the turn boundary: this function is called
       // from the native binding's threadsafe-function bridge, where a throw
       // would be an unhandled error rather than failing the feed.
+      this.failed = true
       this.failure = err
     }
   }
 
   /** Print failures take precedence over the turn's own outcome. */
   throwIfFailed(): void {
-    if (this.failure !== null) {
+    if (this.failed) {
       throw this.failure
     }
   }
