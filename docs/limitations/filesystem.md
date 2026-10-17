@@ -345,3 +345,9 @@ escapes. That matches CPython, and reveals nothing about the target.
 [snapshots](../snapshots.md) possible, and it means
 external processes can observe partial state between writes. See the design
 note in [open.md](open.md).
+
+## Python `OSAccess` exception attributes
+
+When host Python calls [`OSAccess.path_rename()`][pydantic_monty.OSAccess.path_rename] to move a directory into its own
+subtree, the resulting `OSError` has `errno`, `filename` and `filename2` set to `None`.
+CPython populates these attributes; `OSAccess` includes the error number and paths only in the message.
