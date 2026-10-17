@@ -348,6 +348,8 @@ note in [open.md](open.md).
 
 ## Python `OSAccess` exception attributes
 
-When host Python calls [`OSAccess.path_rename()`][pydantic_monty.OSAccess.path_rename] to move a directory into its own
-subtree, the resulting `OSError` has `errno`, `filename` and `filename2` set to `None`.
-CPython populates these attributes; `OSAccess` includes the error number and paths only in the message.
+[`OSAccess`][pydantic_monty.OSAccess] constructs its filesystem `OSError` exceptions (including subclasses) with a message
+only.
+In direct host-Python calls, `errno`, `filename` and `filename2` are `None`; the error number and paths appear in the message.
+This includes [`OSAccess.path_rename()`][pydantic_monty.OSAccess.path_rename] rejecting a move into a descendant directory.
+Exceptions from custom [`AbstractFile`][pydantic_monty.AbstractFile] methods can propagate to the host unchanged.

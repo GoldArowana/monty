@@ -1471,20 +1471,32 @@ def test_rename_directory_updates_file_paths_direct():
 
 
 @pytest.mark.parametrize('via_monty', [False, True])
-@pytest.mark.parametrize('target', ['/a/moved', '/a/b/moved', '/a/b/c/moved', '/a/b/c', '/a/b'])
-def test_rename_directory_into_descendant(monty_run: RunMonty, target: str, via_monty: bool):
+@pytest.mark.parametrize(
+    ('target', 'error_type', 'message'),
+    [
+        ('/a/moved', OSError, '[Errno 22] Invalid argument'),
+        ('/a/b/moved', OSError, '[Errno 22] Invalid argument'),
+        ('/a/b/c/moved', OSError, '[Errno 22] Invalid argument'),
+        ('/a/b/c', OSError, '[Errno 22] Invalid argument'),
+        ('/a/b', OSError, '[Errno 22] Invalid argument'),
+        ('/a/file.txt', NotADirectoryError, '[Errno 20] Not a directory'),
+    ],
+)
+def test_rename_directory_into_descendant(
+    monty_run: RunMonty, target: str, error_type: type[OSError], message: str, via_monty: bool
+):
     """A rejected move into a descendant leaves the original tree usable."""
     files = [MemoryFile('/a/file.txt', 'root data'), MemoryFile('/a/b/nested.txt', 'nested data')]
     fs = OSAccess([*files, MemoryFile('/keep.txt', 'keep data')])
     fs.path_mkdir(P('/a/b/c'), parents=False, exist_ok=False)
 
-    with pytest.raises(MontyRuntimeError if via_monty else OSError) as exc_info:
+    with pytest.raises(MontyRuntimeError if via_monty else error_type) as exc_info:
         if via_monty:
             monty_run(f'from pathlib import Path; Path("/a").rename(Path("{target}"))', os=fs)
         else:
             fs.path_rename(P('/a'), P(target))
-    prefix = 'OSError: ' if via_monty else ''
-    assert str(exc_info.value) == f"{prefix}[Errno 22] Invalid argument: '/a' -> '{target}'"
+    prefix = f'{error_type.__name__}: ' if via_monty else ''
+    assert str(exc_info.value) == f"{prefix}{message}: '/a' -> '{target}'"
 
     assert fs.path_iterdir(P('/')) == [P('/a'), P('/keep.txt')]
     assert fs.path_iterdir(P('/a')) == [P('/a/file.txt'), P('/a/b')]
