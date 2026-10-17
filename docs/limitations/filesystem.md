@@ -352,4 +352,4 @@ note in [open.md](open.md).
 only.
 In direct host-Python calls, `errno`, `filename` and `filename2` are `None`; the error number and paths appear in the message.
 This includes [`OSAccess.path_rename()`][pydantic_monty.OSAccess.path_rename] rejecting a move into a descendant directory.
-Exceptions from custom [`AbstractFile`][pydantic_monty.AbstractFile] methods can propagate to the host unchanged.
+Direct host-Python calls can propagate custom [`AbstractFile`][pydantic_monty.AbstractFile] method exceptions unchanged.
