@@ -210,6 +210,23 @@ for value, digits, expected in [
     for sign in (1.0, -1.0):
         check_float_round(sign * value, digits, sign * expected)
 
+# Checked fixed-width scaling and exact-ratio conversion must agree with fallback.
+for value, digits, expected in [
+    (2.0**-75, 0, 0.0),
+    (2.0**-76, 0, 0.0),
+    (2.0**127, 0, 2.0**127),
+    (2.0**128, 0, 2.0**128),
+    (1.25, 22, 1.25),
+    (7.0, 22, 7.0),
+    (7.0, 23, 7.0),
+    (2.0**127, -38, 2e38),
+    (2.0**127, -39, 0.0),
+    (0.1, 20, 0.1),
+    (3.4028236692093843e38, -35, 3.403e38),
+]:
+    for sign in (1.0, -1.0):
+        check_float_round(sign * value, digits, sign * expected)
+
 # Precision cutoffs, both sides of i64, and arbitrary-sized precision integers.
 for value in (0.0, 1.2345678901234567, 5e-324, 1.7976931348623157e308):
     for sign in (1.0, -1.0):

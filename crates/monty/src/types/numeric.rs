@@ -100,6 +100,10 @@ fn round_float_to_digits(value: f64, digits: i64, heap: &Heap) -> RunResult<f64>
     }
 
     let (mantissa, exponent, _) = value.integer_decode();
+    if let Some(rounded) = round_float_to_digits_u128(mantissa, exponent, digits) {
+        return Ok(rounded.copysign(value));
+    }
+
     let mut numerator = BigInt::from(mantissa);
     let mut denominator = BigInt::from(1u8);
     if exponent >= 0 {
@@ -131,4 +135,43 @@ fn round_float_to_digits(value: f64, digits: i64, heap: &Heap) -> RunResult<f64>
             .ok_or_else(|| ExcType::overflow_error("rounded value too large to represent"))?
     };
     Ok(rounded.copysign(value))
+}
+
+/// Uses fixed-width integers when the result needs at most one floating-point rounding.
+fn round_float_to_digits_u128(mantissa: u64, exponent: i16, digits: i64) -> Option<f64> {
+    let factor = 10_u128.checked_pow(u32::try_from(digits.unsigned_abs()).ok()?)?;
+    let binary_scale = 1_u128.checked_shl(u32::from(exponent.unsigned_abs()))?;
+    let mut numerator = u128::from(mantissa);
+    let mut denominator = 1_u128;
+    if exponent >= 0 {
+        numerator = numerator.checked_mul(binary_scale)?;
+    } else {
+        denominator = binary_scale;
+    }
+    if digits >= 0 {
+        numerator = numerator.checked_mul(factor)?;
+    } else {
+        denominator = denominator.checked_mul(factor)?;
+    }
+
+    let mut quotient = numerator / denominator;
+    let remainder = numerator % denominator;
+    // Compare with one half without doubling the remainder.
+    let complement = denominator - remainder;
+    if remainder > complement || (remainder == complement && quotient.is_odd()) {
+        quotient = quotient.checked_add(1)?;
+    }
+    if digits < 0 {
+        return Some(quotient.checked_mul(factor)? as f64);
+    }
+
+    let common = quotient.gcd(&factor);
+    let numerator = quotient / common;
+    let denominator = factor / common;
+    // Both operands must be exact floats so only division rounds the result.
+    let exact_float = |integer: u128| {
+        (integer.leading_zeros() + integer.trailing_zeros() >= u128::BITS - f64::MANTISSA_DIGITS)
+            .then_some(integer as f64)
+    };
+    Some(exact_float(numerator)? / exact_float(denominator)?)
 }
