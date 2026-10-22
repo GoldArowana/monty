@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
 `AsyncFutureSnapshot.resume_auto()` raises without consuming the snapshot when no host coroutines remain to await,
 including after `load_snapshot()`.
-Resolve the pending calls manually with `resume({call_id: {'return_value': value}})` instead.
+Resolve the pending calls manually with `await snapshot.resume({call_id: {'return_value': value}})` instead.
 
 Host objects and classes cross the boundary through the `ClassInstance` / `ClassType` wrappers; see the
 `pydantic-monty` README.
