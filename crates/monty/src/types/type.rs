@@ -888,29 +888,27 @@ impl Type {
 /// - The special values `inf`, `-inf`, `infinity`, and `nan` (case-insensitive)
 /// - Underscore digit separators, strictly between two digits (`1_000.5`, `1e1_0`)
 pub(crate) fn parse_f64_from_str(value: &str) -> RunResult<f64> {
-    parse_f64(value, &|| {
-        value_error_could_not_convert_string_to_float(StringRepr(value))
-    })
+    parse_f64(value).ok_or_else(|| value_error_could_not_convert_string_to_float(StringRepr(value)))
 }
 
 /// Parses ASCII bytes without accepting Unicode digits or whitespace encoded as UTF-8.
 fn parse_f64_from_bytes(value: &[u8]) -> RunResult<f64> {
     let invalid = || value_error_could_not_convert_string_to_float(bytes_repr(value));
     match str::from_utf8(value) {
-        Ok(text) if text.is_ascii() => parse_f64(text, &invalid),
+        Ok(text) if text.is_ascii() => parse_f64(text).ok_or_else(invalid),
         _ => Err(invalid()),
     }
 }
 
-/// Shares float syntax validation while preserving the original argument's error representation.
-fn parse_f64(value: &str, invalid: &impl Fn() -> RunError) -> RunResult<f64> {
+/// Parses shared float syntax without constructing the caller-specific error.
+fn parse_f64(value: &str) -> Option<f64> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        return Err(invalid());
+        return None;
     }
     let stripped;
     let trimmed = if trimmed.contains('_') {
-        stripped = strip_underscores(trimmed).ok_or_else(invalid)?;
+        stripped = strip_underscores(trimmed)?;
         stripped.as_str()
     } else {
         trimmed
@@ -922,10 +920,10 @@ fn parse_f64(value: &str, invalid: &impl Fn() -> RunError) -> RunResult<f64> {
         "-inf" | "-infinity" => f64::NEG_INFINITY,
         "nan" | "+nan" => f64::NAN,
         "-nan" => -f64::NAN,
-        _ => trimmed.parse::<f64>().map_err(|_| invalid())?,
+        _ => trimmed.parse::<f64>().ok()?,
     };
 
-    Ok(parsed)
+    Some(parsed)
 }
 
 /// Removes digit-separator underscores, or returns `None` when one is not
