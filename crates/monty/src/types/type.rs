@@ -893,11 +893,11 @@ pub(crate) fn parse_f64_from_str(value: &str) -> RunResult<f64> {
 
 /// Parses ASCII bytes without accepting Unicode digits or whitespace encoded as UTF-8.
 fn parse_f64_from_bytes(value: &[u8]) -> RunResult<f64> {
-    let invalid = || value_error_could_not_convert_string_to_float(bytes_repr(value));
-    match str::from_utf8(value) {
-        Ok(text) if text.is_ascii() => parse_f64(text).ok_or_else(invalid),
-        _ => Err(invalid()),
-    }
+    str::from_utf8(value)
+        .ok()
+        .filter(|text| text.is_ascii())
+        .and_then(parse_f64)
+        .ok_or_else(|| value_error_could_not_convert_string_to_float(bytes_repr(value)))
 }
 
 /// Parses shared float syntax without constructing the caller-specific error.
