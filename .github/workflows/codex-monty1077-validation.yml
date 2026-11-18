@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 18
     env:
       CARGO_BUILD_JOBS: '2'
       UV_PYTHON: '3.14'
@@ -44,7 +44,7 @@ jobs:
           components: clippy
       - run: rustup default stable
       - name: Configure external Cargo target directory
-        run: echo "CARGO_TARGET_DIR=$RUNNER_TEMP/monty1077-target" >> "$GITHUB_ENV"
+        run: echo "CARGO_TARGET_DIR=$RUNNER_TEMP/monty1077-candidate-$GITHUB_RUN_ID" >> "$GITHUB_ENV"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
           python-version: '3.14'

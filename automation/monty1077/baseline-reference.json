@@ -1,0 +1,17 @@
+{
+  "run_id": 44356866675,
+  "event_sha": "9d49734e8ff938cac88744fe1689a7a105318b8e",
+  "baseline_sha": "2a0ba89d428b2846437815f60d577bba9f9c5211",
+  "baseline_tree": "b1908254988c9a55ebc1b6d8e6de6d8b95d6b5bc",
+  "CPython": "3.14.10",
+  "Rust": "1.100.0",
+  "expected_cases_sha256": "e04b67a98c66abcf3e60307b190912aac2081069fe86fecd23e48710e363d356",
+  "probe_results_sha256": "7e756b944cc40f41067c586a0abccfd37083be15b6de08e4214514dd3ef8ea85",
+  "cases": 2607,
+  "mismatches": 54,
+  "baseline_full_make_test_no_features_exit": 0,
+  "source_states_clean": true,
+  "baseline_negative_witness": "round(562949953421312.0, -15)",
+  "baseline_overflow_witness": true,
+  "evidence_scope": "Original cold-baseline Cargo runtime compiled from baseline/crates/monty in knownrun; source library build provenance verified in retained logs. This new run does not rerun baseline."
+}

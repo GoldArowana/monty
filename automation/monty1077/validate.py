@@ -149,7 +149,7 @@ def cases():
 
 
 def probe(name, path, expected):
-    if command(name + '-build', ['cargo', 'build', '--locked', '-p', 'monty-runtime'], path) != 0:
+    if command(name + '-build', ['cargo', 'build', '--verbose', '--locked', '-p', 'monty-runtime'], path) != 0:
         raise RuntimeError('Could not build exact ' + name + ' native runtime')
     require_clean(name + '-build')
     if command(name + '-help', ['cargo', 'run', '--quiet', '--locked', '-p', 'monty-runtime', '--', '--help'], path) != 0:
@@ -210,13 +210,12 @@ try:
     os.environ['CARGO_NET_OFFLINE'] = 'true'
     require_clean('rust-bootstrap')
     expected = cases()
-    baseline = probe('baseline', BASE, expected)
-    summary['baseline_probe'] = {'cases': baseline['cases'], 'mismatches': baseline['mismatch_count']}
-    assert baseline['mismatch_count'] > 0
-    assert any(item['expected']['kind'] == 'error' for item in baseline['differences']), 'No overflow baseline'
-    assert any(item['expected']['expression'] == 'round(562949953421312.0, -15)' for item in baseline['differences'])
-    command('baseline-make-test-no-features', ['make', 'test-no-features'], BASE, required=False)
-    require_clean('baseline-full-tests')
+    baseline_reference = json.loads((HARNESS / 'baseline-reference.json').read_text())
+    assert sys.version.startswith('3.14.10 '), sys.version
+    assert sha(E / 'cpython-expected.json') == baseline_reference['expected_cases_sha256']
+    summary['baseline_probe'] = dict(baseline_reference)
+    summary['baseline_reused_actual_known_run'] = baseline_reference['run_id']
+    save('baseline-previous-run-reference.json', baseline_reference)
     if command('candidate-make-format-rs', ['make', 'format-rs']) != 0:
         raise RuntimeError('Required Rust formatting command failed')
     require_clean('required-format-rs')
