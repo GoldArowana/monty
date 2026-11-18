@@ -131,22 +131,35 @@ def cases():
             item = {'expression': expression, 'kind': 'error', 'class': type(error).__name__, 'message': str(error)}
         expected.append(item)
     (E / 'expressions.txt').write_text('\n'.join(expressions) + '\n')
+    blocks = []
+    for index, expression in enumerate(expressions):
+        blocks.append(
+            'try:\n'
+            f'    value = {expression}\n'
+            '    if type(value) == float:\n'
+            f'        print({index}, "OK", "Float(" + repr(value) + ")", sep="\\t")\n'
+            '    else:\n'
+            f'        print({index}, "OTHER", repr(value), sep="\\t")\n'
+            'except Exception as error:\n'
+            f'    print({index}, "ERROR", type(error).__name__ + ": " + str(error), sep="\\t")\n'
+        )
+    (E / 'public-cli-probe.py').write_text('\n'.join(blocks))
     save('cpython-expected.json', expected)
     return expected
 
 
 def probe(name, path, expected):
-    if command(name + '-build', ['cargo', 'build', '--locked', '-p', 'monty'], path) != 0:
-        raise RuntimeError('Could not build exact ' + name + ' library')
+    if command(name + '-build', ['cargo', 'build', '--locked', '-p', 'monty-runtime'], path) != 0:
+        raise RuntimeError('Could not build exact ' + name + ' native runtime')
     require_clean(name + '-build')
-    target = pathlib.Path(os.environ['CARGO_TARGET_DIR'])
-    binary = E / ('probe-' + name)
-    if command(name + '-probe-rustc', ['rustc', '--edition=2024', str(HARNESS / 'probe.rs'),
-               '--extern', 'monty=' + str(target / 'debug/libmonty.rlib'),
-               '-L', 'dependency=' + str(target / 'debug/deps'), '-o', str(binary)], ROOT) != 0:
-        raise RuntimeError('Could not compile public API probe')
-    if command(name + '-probe', [str(binary), str(E / 'expressions.txt')], ROOT, timeout=600) != 0:
-        raise RuntimeError('Probe execution failed')
+    if command(name + '-help', ['cargo', 'run', '--quiet', '--locked', '-p', 'monty-runtime', '--', '--help'], path) != 0:
+        raise RuntimeError('Public CLI help failed')
+    help_text = (E / (name + '-help.stdout')).read_text()
+    assert '--max-feed-duration' in help_text and '--max-turn-duration' in help_text
+    if command(name + '-probe', ['cargo', 'run', '--quiet', '--locked', '-p', 'monty-runtime', '--',
+               '--max-feed-duration', '30', '--max-turn-duration', '30',
+               str(E / 'public-cli-probe.py')], path, timeout=600) != 0:
+        raise RuntimeError('Public CLI probe execution failed')
     actual = (E / (name + '-probe.stdout')).read_text().splitlines()
     assert len(actual) == len(expected), (name, len(actual), len(expected))
     differences = []
