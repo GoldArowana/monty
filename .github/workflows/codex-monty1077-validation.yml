@@ -1,0 +1,64 @@
+name: Monty 1077 exact source validation
+run-name: Monty1077 fe9dc4b2 source 057da5c2
+
+on:
+  push:
+    branches: [codex-ci/monty1077-fe9dc4b2]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_TARGET_DIR: ${{ runner.temp }}/monty1077-target
+      UV_PYTHON: '3.14'
+      UV_FROZEN: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: GoldArowana/monty
+          ref: 057da5c2ee1e1bf25b18fa07aff9c8afb8a388c4
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: pydantic/monty
+          ref: 2a0ba89d428b2846437815f60d577bba9f9c5211
+          path: baseline
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: nightly
+          components: rustfmt
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+          components: clippy
+      - run: rustup default stable
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.14'
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          enable-cache: false
+      - name: Run genuine baseline and final source checks
+        run: python3 harness/automation/monty1077/validate.py
+      - name: Always assert both source trees remain exact and clean
+        if: always()
+        run: python3 harness/automation/monty1077/validate.py --final-only
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: monty1077-fe9dc4b2-source057da5c2
+          path: evidence
+          if-no-files-found: error
+          retention-days: 7
