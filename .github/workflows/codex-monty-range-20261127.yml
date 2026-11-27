@@ -1,0 +1,49 @@
+name: Monty range compatibility presubmit
+on:
+  push:
+    branches: ['codex-ci/monty-range-90c0c1a']
+permissions:
+  contents: read
+jobs:
+  checks:
+    if: github.repository == 'GoldArowana/monty' && github.ref == 'refs/heads/codex-ci/monty-range-90c0c1a'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: '90c0c1a20abf7b43bd45f88d91f1efbd099383b7'
+          persist-credentials: false
+      - run: |
+          test "$(git rev-parse HEAD)" = "90c0c1a20abf7b43bd45f88d91f1efbd099383b7"
+          test "$(git rev-parse HEAD^{tree})" = "10cf9e570a63742476f462b939b4cf387994353f"
+          printf 'tested_head=%s tested_tree=%s\n' "90c0c1a20abf7b43bd45f88d91f1efbd099383b7" "10cf9e570a63742476f462b939b4cf387994353f"
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: nightly
+          components: rustfmt
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+          components: clippy
+      - run: rustup default stable
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          enable-cache: false
+      - name: Install project Python tools
+        run: make install-py
+      - name: Compare Monty with CPython 3.14
+        run: |
+          .venv/bin/python -VV
+          .venv/bin/python crates/monty/test_cases/range__ops.py
+          PYO3_PYTHON="$PWD/.venv/bin/python" cargo run --locked -p monty-datatest -- range__ops
+      - name: Check Rust and Markdown formatting
+        run: |
+          make format-rs
+          make format-md
+          make lint-md
+          git diff HEAD --exit-code
+      - name: Run required Rust lint
+        run: |
+          PYO3_PYTHON="$PWD/.venv/bin/python" make lint-rs
+          git diff HEAD --exit-code
